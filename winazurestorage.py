@@ -57,21 +57,21 @@ class WAStorageConnection:
         return response.read()
                 
     def list_containers(self):
-    	#TODO: Deal with nextmarker for large requests (only 5K containers returned by default)
-    	#TODO: Use a different XML parsing scheme
-    	
-    	response = self._do_store_request(query_string = "?comp=list")
-    	
-    	dom = minidom.parseString(response.read())
-    	
-    	containers = dom.getElementsByTagName("Container")
-    	for container in containers:
-    		container_name = container.getElementsByTagName("Name")[0].firstChild.data
-    		etag = container.getElementsByTagName("Etag")[0].firstChild.data
-    		last_modified = time.strptime(container.getElementsByTagName("LastModified")[0].firstChild.data, TIME_FORMAT)
-    		yield (container_name, etag, last_modified)
-    	
-    	dom.unlink() #Docs say to do this to force GC. Ugh.
+        #TODO: Deal with nextmarker for large requests (only 5K containers returned by default)
+        #TODO: Use a different XML parsing scheme
+        
+        response = self._do_store_request(query_string = "?comp=list")
+        
+        dom = minidom.parseString(response.read())
+        
+        containers = dom.getElementsByTagName("Container")
+        for container in containers:
+            container_name = container.getElementsByTagName("Name")[0].firstChild.data
+            etag = container.getElementsByTagName("Etag")[0].firstChild.data
+            last_modified = time.strptime(container.getElementsByTagName("LastModified")[0].firstChild.data, TIME_FORMAT)
+            yield (container_name, etag, last_modified)
+        
+        dom.unlink() #Docs say to do this to force GC. Ugh.
   
     def _get_auth_header(self, http_method, path, data, headers):
         string_to_sign =""
@@ -91,7 +91,7 @@ class WAStorageConnection:
         # always exists in our implementation
         string_to_sign +=  NEW_LINE
         
-        # Construct canonicalized Nephos headers. 
+        # Construct canonicalized headers. 
         # TODO: Note that this doesn't implement parts of the spec - combining header fields with same name,
         # unfolding long lines and trimming white spaces around the colon
         
@@ -109,7 +109,7 @@ class WAStorageConnection:
         
         
     def _do_store_request(self, container=None, blob_name=None, http_method="GET", headers = {},data = "", 
-    				content_type=None, query_string = None, signed=True):
+                    content_type=None, query_string = None, signed=True):
         connection = httplib.HTTPConnection(self.server_url)
         
         # Construct right path based on account name , container name and blob name if any
@@ -120,7 +120,7 @@ class WAStorageConnection:
                 path = path + blob_name
         
         if query_string != None:
-        	path = path + query_string
+            path = path + query_string
       
         
         headers[PREFIX_STORAGE_HEADER + "date"] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()) #RFC 1123
@@ -128,24 +128,24 @@ class WAStorageConnection:
             headers["content-type"] = content_type  
                
         if signed:
-        	auth_header = self._get_auth_header(http_method,path, data, headers)
-        	headers["Authorization"] = "SharedKey " + self.account_name + ":" + auth_header
-        	headers["content-length"] = len(data)
+            auth_header = self._get_auth_header(http_method,path, data, headers)
+            headers["Authorization"] = "SharedKey " + self.account_name + ":" + auth_header
+            headers["content-length"] = len(data)
          
         connection.request(http_method, path, data, headers)
         response = connection.getresponse()
         if DEBUG:
-        	print response.status
+            print response.status
         return response
 
-	
+    
 def main():
     conn = WAStorageConnection()
     for (container_name,etag, last_modified ) in  conn.list_containers():
-    	print container_name
-    	print etag
-    	print last_modified
-    	
+        print container_name
+        print etag
+        print last_modified
+        
     conn.create_container("testcontainer", False)
     conn.put_blob("testcontainer","test","Hello World!" )
     print conn.get_blob("testcontainer", "test")
