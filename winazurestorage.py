@@ -174,8 +174,8 @@ class BlobStorage(Storage):
     def create_container(self, container_name, is_public = False):
         req = RequestWithMethod("PUT", "%s/%s" % (self.get_base_url(), container_name))
         req.add_header("Content-Length", "0")
-        self._credentials.sign_request(req)
         if is_public: req.add_header(PREFIX_PROPERTIES + "publicaccess", "true")
+        self._credentials.sign_request(req)
         try:
             response = urlopen(req)
             return response.code
