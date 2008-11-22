@@ -13,7 +13,7 @@ import sys
 import os
 from xml.dom import minidom #TODO: Use a faster way of processing XML
 import re
-from urllib2 import Request, urlopen
+from urllib2 import Request, urlopen, URLError
 from urlparse import urlsplit
 from datetime import datetime, timedelta
 
@@ -176,12 +176,20 @@ class BlobStorage(Storage):
         req.add_header("Content-Length", "0")
         self._credentials.sign_request(req)
         if is_public: req.add_header(PREFIX_PROPERTIES + "publicaccess", "true")
-        return urlopen(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
 
     def delete_container(self, container_name):
         req = RequestWithMethod("DELETE", "%s/%s" % (self.get_base_url(), container_name))
         self._credentials.sign_request(req)
-        return urlopen(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
 
     def list_containers(self):
         req = Request("%s/?comp=list" % self.get_base_url())
@@ -201,7 +209,11 @@ class BlobStorage(Storage):
         req.add_header("Content-Length", "%d" % len(data))
         if content_type is not None: req.add_header("Content-Type", content_type)
         self._credentials.sign_request(req)
-        return urlopen(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
 
     def get_blob(self, container_name, blob_name):
         req = Request("%s/%s/%s" % (self.get_base_url(), container_name, blob_name))
