@@ -45,6 +45,9 @@ def parse_edm_datetime(input):
 def parse_edm_int32(input):
     return int(input)
 
+def parse_edm_boolean(input):
+    return input.lower() == "true"
+
 class SharedKeyCredentials(object):
     def __init__(self, account_name, account_key, use_path_style_uris = None):
         self._account = account_name
@@ -153,6 +156,7 @@ class TableStorage(Storage):
                 t = property.getAttribute('m:type')
                 if t.lower() == 'edm.datetime': value = parse_edm_datetime(property.firstChild.data)
                 elif t.lower() == 'edm.int32': value = parse_edm_int32(property.firstChild.data)
+                elif t.lower() == 'edm.boolean': value = parse_edm_boolean(property.firstChild.data)
                 else: raise Exception(t.lower())
             else: value = property.firstChild.data
             setattr(entity, key, value)
