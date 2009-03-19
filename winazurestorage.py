@@ -3,6 +3,7 @@
 """
 Python wrapper around Windows Azure storage
 Sriram Krishnan <sriramk@microsoft.com>
+Steve Marx <steve.marx@microsoft.com>
 """
 
 import base64
@@ -38,12 +39,15 @@ TIME_FORMAT ="%a, %d %b %Y %H:%M:%S %Z"
 
 def parse_edm_datetime(input):
     d = datetime.strptime(input[:input.find('.')], "%Y-%m-%dT%H:%M:%S")
-    if input[:input.find('.')] != -1:
+    if input.find('.') != -1:
         d += timedelta(0, 0, int(round(float(input[input.index('.'):-1])*1000000)))
     return d
 
 def parse_edm_int32(input):
     return int(input)
+
+def parse_edm_double(input):
+    return float(input)
 
 def parse_edm_boolean(input):
     return input.lower() == "true"
@@ -122,11 +126,68 @@ class Storage(object):
 
 class TableEntity(object): pass
 
+class QueueStorage(Storage):
+    def __init__(self, host, account_name, secret_key, use_path_style_uris = None):
+        super(QueueStorage, self).__init__(host, account_name, secret_key, use_path_style_uris)
+
+    def create_queue(self, name):
+        req = RequestWithMethod("PUT", "%s/%s" % (self.get_base_url(), name))
+        req.add_header("Content-Length", "0")
+        self._credentials.sign_request(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
+
+    def delete_queue(self, name):
+        req = RequestWithMethod("DELETE", "%s/%s" % (self.get_base_url(), name))
+        self._credentials.sign_request(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
+
 class TableStorage(Storage):
-    '''Due to local development storage not supporting SharedKeyLite authentication, this class
+    '''Due to local development storage not supporting SharedKey authentication, this class
        will only work against cloud storage.'''
     def __init__(self, host, account_name, secret_key, use_path_style_uris = None):
         super(TableStorage, self).__init__(host, account_name, secret_key, use_path_style_uris)
+
+    def create_table(self, name):
+        data = """<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<entry xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns="http://www.w3.org/2005/Atom">
+  <title />
+  <updated>%s</updated>
+  <author>
+    <name />
+  </author>
+  <id />
+  <content type="application/xml">
+    <m:properties>
+      <d:TableName>%s</d:TableName>
+    </m:properties>
+  </content>
+</entry>""" % (time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()), name)
+        req = RequestWithMethod("POST", "%s/Tables" % self.get_base_url(), data=data)
+        req.add_header("Content-Length", "%d" % len(data))
+        req.add_header("Content-Type", "application/atom+xml")
+        self._credentials.sign_table_request(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
+
+    def delete_table(self, name):
+        req = RequestWithMethod("DELETE", "%s/Tables('%s')" % (self.get_base_url(), name))
+        self._credentials.sign_table_request(req)
+        try:
+            response = urlopen(req)
+            return response.code
+        except URLError, e:
+            return e.code
 
     def list_tables(self):
         req = Request("%s/Tables" % self.get_base_url())
@@ -157,8 +218,9 @@ class TableStorage(Storage):
                 if t.lower() == 'edm.datetime': value = parse_edm_datetime(property.firstChild.data)
                 elif t.lower() == 'edm.int32': value = parse_edm_int32(property.firstChild.data)
                 elif t.lower() == 'edm.boolean': value = parse_edm_boolean(property.firstChild.data)
+                elif t.lower() == 'edm.double': value = parse_edm_double(property.firstChild.data)
                 else: raise Exception(t.lower())
-            else: value = property.firstChild.data
+            else: value = property.firstChild is not None and property.firstChild.data or None
             setattr(entity, key, value)
         return entity
 
