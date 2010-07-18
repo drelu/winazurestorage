@@ -9,8 +9,8 @@ logging.basicConfig(level=logging.DEBUG)
 SERVICE_MANAGEMENT_HOST = 'management.core.windows.net'
 
 # User Configuration
-USER_CERTIFICATE = 'azure-certificate.pem'
-SUBSCRIPTION_ID='c86aebd3-affe-4feb-aaa1-e69e7ee65d10'
+USER_CERTIFICATE = '<put the name of your certificate file here'
+SUBSCRIPTION_ID='<put your subscription id here>'
 
 
 class ServiceManagement(object):
